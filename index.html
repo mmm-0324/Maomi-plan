@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M&amp;M PLAN</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fdf6f0;--card:#fff;--border:#e8dff5;--text:#3d3550;--muted:#9b8ec4;
+  --accent:#9b8ec4;--accent2:#b8a8d8;
+  --minami-bg:#ddeeff;--minami-c:#3a7bbf;
+  --maomao-bg:#fde8e8;--maomao-c:#c44f4f;
+  --both-bg:#ede8f8;--both-c:#7c5bbf;
+  --s-pending-bg:#fff8e1;--s-pending-c:#9a6700;
+  --s-confirmed-bg:#e1f0ff;--s-confirmed-c:#2563a8;
+  --s-completed-bg:#e1f5ec;--s-completed-c:#1f7a52;
+  --s-cancelled-bg:#fde8e8;--s-cancelled-c:#b93333;
+  --shadow:0 4px 18px rgba(155,142,196,.15);
+  --radius:14px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.screen{display:none}
+.screen.active{display:block}
+
+/* LOGIN */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#c8dff5 0%,#f5c8d8 100%)}
+.login-card{background:#fff;border-radius:24px;padding:52px 44px;width:380px;box-shadow:0 20px 60px rgba(155,142,196,.25);text-align:center}
+.login-logo{font-size:2.2rem;font-weight:800;letter-spacing:3px;margin-bottom:8px}
+.login-logo .lm{color:var(--minami-c)}.login-logo .lamp{color:var(--accent)}.login-logo .lm2{color:var(--maomao-c)}
+.login-sub{color:var(--muted);font-size:.88rem;margin-bottom:36px;font-style:italic}
+.login-card input{width:100%;padding:14px 18px;border:2px solid var(--border);border-radius:var(--radius);font-size:1.1rem;text-align:center;letter-spacing:4px;outline:none;transition:border .2s;color:var(--text)}
+.login-card input:focus{border-color:var(--accent)}
+.btn{padding:12px 24px;border:none;border-radius:var(--radius);cursor:pointer;font-size:.95rem;font-weight:600;transition:all .2s}
+.btn-primary{background:var(--accent);color:#fff;width:100%;margin-top:14px;font-size:1rem}
+.btn-primary:hover{background:var(--accent2)}
+.btn-sm{padding:7px 16px;font-size:.82rem}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:#fde8e8;color:var(--maomao-c)}
+.btn-danger:hover{background:#f8d0d0}
+.login-error{color:var(--maomao-c);font-size:.85rem;margin-top:10px;min-height:20px}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.shake{animation:shake .4s ease}
+
+/* HEADER */
+header{background:linear-gradient(90deg,#c8dff5 0%,#f5c8d8 100%);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(155,142,196,.2)}
+.h-logo{font-size:1.25rem;font-weight:800;letter-spacing:2px}
+.h-logo .lm{color:var(--minami-c)}.h-logo .lamp{color:var(--accent)}.h-logo .lm2{color:var(--maomao-c)}
+.h-right{display:flex;gap:10px;align-items:center}
+
+/* MAIN CONTENT */
+.main{max-width:960px;margin:0 auto;padding:32px 20px}
+
+/* DASHBOARD */
+.dash-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.dash-top h2{font-size:1.4rem;font-weight:700;color:var(--text)}
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
+.plan-card{background:var(--card);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow);cursor:pointer;border:2px solid transparent;transition:border .2s,transform .15s}
+.plan-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.plan-card h3{font-size:1.05rem;font-weight:700;margin-bottom:6px}
+.plan-card .card-meta{font-size:.82rem;color:var(--muted);margin-bottom:4px}
+.plan-card .card-dots{margin-top:10px;display:flex;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.dot-minami{background:var(--minami-c)}.dot-maomao{background:var(--maomao-c)}
+.empty-state{text-align:center;padding:80px 20px;color:var(--muted)}
+.empty-state h3{font-size:1.1rem;margin-bottom:8px}.empty-state p{font-size:.9rem}
+
+/* EDITOR */
+.editor-header{display:flex;align-items:center;gap:16px;margin-bottom:28px}
+.editor-header h2{font-size:1.4rem;font-weight:700}
+.section-card{background:var(--card);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:20px}
+.section-title{font-size:1rem;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px;color:var(--accent)}
+.section-title .icon{font-size:1.1rem}
+.form-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.form-group{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px}
+.form-group.full{flex:100%;min-width:100%}
+label{font-size:.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+input,select,textarea{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:.9rem;color:var(--text);background:#fff;outline:none;transition:border .2s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px}
+
+.item-block{background:#faf8ff;border:1.5px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
+.item-block-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.item-block-header span{font-weight:700;font-size:.9rem;color:var(--accent)}
+.sub-section{background:#fff;border-radius:8px;padding:14px;margin-bottom:12px;border:1px solid var(--border)}
+.sub-section-title{font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.activity-row{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.activity-row>*{flex:1;min-width:100px}
+.activity-row>.btn{flex:0;min-width:auto}
+
+.editor-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:8px}
+
+/* DETAIL VIEW */
+.detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.detail-header h2{font-size:1.4rem;font-weight:700}
+.detail-header .actions{display:flex;gap:10px}
+.view-tabs{display:flex;gap:0;margin-bottom:20px;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;width:fit-content}
+.view-tab{padding:9px 24px;cursor:pointer;font-size:.9rem;font-weight:600;color:var(--muted);background:#fff;border:none;transition:all .2s}
+.view-tab.active{background:var(--accent);color:#fff}
+
+/* TABLE VIEW */
+.plan-table{width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.plan-table thead th{background:linear-gradient(90deg,#c8dff5,#f5c8d8);padding:13px 16px;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text);text-align:left}
+.plan-table tbody tr{border-bottom:1px solid var(--border)}
+.plan-table tbody tr:last-child{border-bottom:none}
+.plan-table td{padding:12px 16px;font-size:.88rem;vertical-align:middle}
+.row-minami{background:#f0f6ff}.row-maomao{background:#fff2f2}.row-both{background:#f5f2fd}
+.owner-badge{padding:3px 11px;border-radius:20px;font-size:.78rem;font-weight:700;white-space:nowrap}
+.ob-minami{background:var(--minami-bg);color:var(--minami-c)}
+.ob-maomao{background:var(--maomao-bg);color:var(--maomao-c)}
+.ob-both{background:var(--both-bg);color:var(--both-c)}
+.status-sel{padding:4px 8px;border-radius:20px;font-size:.78rem;font-weight:600;border:none;cursor:pointer;outline:none}
+.st-pending{background:var(--s-pending-bg);color:var(--s-pending-c)}
+.st-confirmed{background:var(--s-confirmed-bg);color:var(--s-confirmed-c)}
+.st-completed{background:var(--s-completed-bg);color:var(--s-completed-c)}
+.st-cancelled{background:var(--s-cancelled-bg);color:var(--s-cancelled-c)}
+.cat-badge{padding:3px 10px;border-radius:6px;font-size:.78rem;background:#f0ecfa;color:var(--accent);font-weight:600}
+
+/* CALENDAR VIEW */
+.cal-day{margin-bottom:28px}
+.cal-day-header{font-size:1rem;font-weight:700;color:var(--accent);padding:10px 16px;background:linear-gradient(90deg,#e8f0ff,#fde8f0);border-radius:10px 10px 0 0;border:1.5px solid var(--border);border-bottom:none}
+.cal-table{width:100%;border-collapse:collapse;border:1.5px solid var(--border);border-radius:0 0 10px 10px;overflow:hidden;background:#fff}
+.cal-table th{padding:9px 14px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:#faf8ff;text-align:left;border-bottom:1.5px solid var(--border)}
+.cal-table td{padding:10px 14px;font-size:.87rem;border-bottom:1px solid var(--border);vertical-align:middle}
+.cal-table tr:last-child td{border-bottom:none}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  .main{padding:16px 12px}
+  .form-row{flex-direction:column}
+  .plan-grid{grid-template-columns:1fr}
+  .activity-row{flex-direction:column}
+  header{padding:0 16px}
+  .plan-table,.cal-table{font-size:.8rem}
+  .plan-table td,.plan-table th,.cal-table td,.cal-table th{padding:8px 10px}
+}
+@media print{
+  header,.btn,.view-tabs,.editor-actions,.detail-header .actions{display:none!important}
+  body{background:#fff}
+  .main{padding:0}
+  .plan-table,.cal-table{box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="screen active">
+  <div class="login-card" id="login-card">
+    <div class="login-logo"><span class="lm">M</span><span class="lamp">&amp;</span><span class="lm2">M</span></div>
+    <div class="login-sub">Our little travel planner ✈</div>
+    <input type="password" id="pwd-input" placeholder="Password" autocomplete="current-password">
+    <button class="btn btn-primary" onclick="doLogin()">Enter</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app-screen" class="screen">
+  <header>
+    <div class="h-logo"><span class="lm">M</span><span class="lamp">&amp;</span><span class="lm2">M</span> <span style="font-weight:400;font-size:.9rem;color:#5a4a6a;letter-spacing:1px">PLAN</span></div>
+    <div class="h-right">
+      <button class="btn btn-sm btn-ghost" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- DASHBOARD -->
+  <div id="dash" class="main">
+    <div class="dash-top">
+      <h2>Our Plans</h2>
+      <button class="btn btn-primary btn-sm" style="width:auto" onclick="openEditor(null)">+ New Plan</button>
+    </div>
+    <div id="plan-grid" class="plan-grid"></div>
+  </div>
+
+  <!-- EDITOR -->
+  <div id="editor" class="main" style="display:none">
+    <div class="editor-header">
+      <button class="btn btn-ghost btn-sm" onclick="showDash()">← Back</button>
+      <h2 id="editor-title">New Plan</h2>
+    </div>
+
+    <!-- Trip Info -->
+    <div class="section-card">
+      <div class="section-title"><span class="icon">🗺</span> Trip Info</div>
+      <div class="form-row">
+        <div class="form-group full"><label>Plan Title</label><input type="text" id="f-title" placeholder="e.g. Summer 2026 Meetup"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Date</label><input type="date" id="f-start"></div>
+        <div class="form-group"><label>End Date</label><input type="date" id="f-end"></div>
+      </div>
+    </div>
+
+    <!-- Flights -->
+    <div class="section-card">
+      <div class="section-title"><span class="icon">✈️</span> Flights</div>
+      <div id="flights-container"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addFlight()">+ Add Flight</button>
+    </div>
+
+    <!-- Destinations -->
+    <div class="section-card">
+      <div class="section-title"><span class="icon">📍</span> Destinations</div>
+      <div id="destinations-container"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addDestination()">+ Add Destination</button>
+    </div>
+
+    <!-- Notes -->
+    <div class="section-card">
+      <div class="section-title"><span class="icon">📝</span> Notes</div>
+      <textarea id="f-notes" placeholder="Any additional notes..."></textarea>
+    </div>
+
+    <div class="editor-actions">
+      <button class="btn btn-ghost" onclick="showDash()">Cancel</button>
+      <button class="btn btn-primary" style="width:auto" onclick="savePlanData()">Save Plan</button>
+    </div>
+  </div>
+
+  <!-- DETAIL VIEW -->
+  <div id="detail" class="main" style="display:none">
+    <div class="detail-header">
+      <div style="display:flex;align-items:center;gap:14px">
+        <button class="btn btn-ghost btn-sm" onclick="showDash()">← Back</button>
+        <h2 id="detail-title"></h2>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost btn-sm" onclick="editCurrentPlan()">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCurrentPlan()">🗑 Delete</button>
+      </div>
+    </div>
+    <div id="detail-meta" style="color:var(--muted);font-size:.88rem;margin-bottom:20px"></div>
+    <div class="view-tabs">
+      <button class="view-tab active" id="tab-table" onclick="switchTab('table')">📋 Table</button>
+      <button class="view-tab" id="tab-cal" onclick="switchTab('cal')">📅 Calendar</button>
+    </div>
+    <div id="detail-table-view"></div>
+    <div id="detail-cal-view" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────
+const PASSWORD = '230605';
+const SUPABASE_URL = 'https://gbvgbwxxgmznqvganmau.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_-3xmapx6Rgjim9rcPfKrIA_XYhBi1-e';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── State ────────────────────────────────────────────────
+let currentPlanId = null;
+let currentTab = 'table';
+
+// ── Storage ──────────────────────────────────────────────
+async function loadPlans(){
+  const {data,error}=await supabase.from('plans').select('*').order('created_at',{ascending:false});
+  if(error){console.error(error);return[];}
+  return data.map(row=>({id:row.id,...row.data}));
+}
+async function savePlan(plan){
+  const {error}=await supabase.from('plans').upsert({id:plan.id,data:plan,updated_at:new Date().toISOString()});
+  if(error)console.error(error);
+}
+async function deletePlan(id){
+  const {error}=await supabase.from('plans').delete().eq('id',id);
+  if(error)console.error(error);
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+
+// ── Auth ─────────────────────────────────────────────────
+function doLogin(){
+  const v=document.getElementById('pwd-input').value;
+  if(v===PASSWORD){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app-screen').style.display='block';
+    document.getElementById('login-error').textContent='';
+    showDash();
+  } else {
+    const card=document.getElementById('login-card');
+    card.classList.remove('shake');void card.offsetWidth;card.classList.add('shake');
+    document.getElementById('login-error').textContent='Incorrect password. Please try again.';
+  }
+}
+function doLogout(){
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('pwd-input').value='';
+}
+document.getElementById('pwd-input').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+
+// ── Helpers ───────────────────────────────────────────────
+function ownerBadge(o){
+  const m={minami:['ob-minami','Minami'],maomao:['ob-maomao','Maomao'],both:['ob-both','Both']};
+  const[cls,lbl]=m[o]||m.both;
+  return `<span class="owner-badge ${cls}">${lbl}</span>`;
+}
+function ownerRowClass(o){return{minami:'row-minami',maomao:'row-maomao',both:'row-both'}[o]||'row-both'}
+function statusClass(s){return{pending:'st-pending',confirmed:'st-confirmed',completed:'st-completed',cancelled:'st-cancelled'}[s]||'st-pending'}
+function statusLabel(s){return{pending:'Pending',confirmed:'Confirmed',completed:'Completed',cancelled:'Cancelled'}[s]||'Pending'}
+function ownerSelect(name,val){
+  return `<select name="${name}" class="form-control" style="padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:.85rem">
+    <option value="minami"${val==='minami'?' selected':''}>Minami</option>
+    <option value="maomao"${val==='maomao'?' selected':''}>Maomao</option>
+    <option value="both"${val==='both'?' selected':''}>Both</option>
+  </select>`;
+}
+function statusSelect(name,val){
+  return `<select name="${name}" class="form-control" style="padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:.85rem">
+    <option value="pending"${val==='pending'?' selected':''}>Pending</option>
+    <option value="confirmed"${val==='confirmed'?' selected':''}>Confirmed</option>
+    <option value="completed"${val==='completed'?' selected':''}>Completed</option>
+    <option value="cancelled"${val==='cancelled'?' selected':''}>Cancelled</option>
+  </select>`;
+}
+function inlineStatusSel(status, onchangeCode){
+  const sc=statusClass(status);
+  return `<select class="status-sel ${sc}" onchange="${onchangeCode};this.className='status-sel '+statusClass(this.value)">
+    <option value="pending"${status==='pending'?' selected':''}>Pending</option>
+    <option value="confirmed"${status==='confirmed'?' selected':''}>Confirmed</option>
+    <option value="completed"${status==='completed'?' selected':''}>Completed</option>
+    <option value="cancelled"${status==='cancelled'?' selected':''}>Cancelled</option>
+  </select>`;
+}
+function fmtDate(d){
+  if(!d)return'–';
+  const dt=new Date(d+'T12:00:00');
+  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+function fmtDateLong(d){
+  if(!d)return'–';
+  const dt=new Date(d+'T12:00:00');
+  return dt.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+}
+
+// ── Navigation ────────────────────────────────────────────
+function showDash(){
+  document.getElementById('dash').style.display='';
+  document.getElementById('editor').style.display='none';
+  document.getElementById('detail').style.display='none';
+  renderDash();
+}
+function showEditor(){
+  document.getElementById('dash').style.display='none';
+  document.getElementById('editor').style.display='';
+  document.getElementById('detail').style.display='none';
+}
+function showDetail(){
+  document.getElementById('dash').style.display='none';
+  document.getElementById('editor').style.display='none';
+  document.getElementById('detail').style.display='';
+}
+
+// ── Dashboard ─────────────────────────────────────────────
+async function renderDash(){
+  const plans=await loadPlans();
+  const grid=document.getElementById('plan-grid');
+  if(!plans.length){
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><h3>No plans yet</h3><p>Click "+ New Plan" to start planning your next meetup!</p></div>`;
+    return;
+  }
+  grid.innerHTML=plans.map(p=>{
+    const hasMi=hasOwner(p,'minami'),hasMa=hasOwner(p,'maomao');
+    const dots=(hasMi?`<span class="dot dot-minami" title="Minami"></span>`:'')+(hasMa?`<span class="dot dot-maomao" title="Maomao"></span>`:'');
+    const destCount=p.destinations?p.destinations.length:0;
+    return `<div class="plan-card" onclick="openDetail('${p.id}')">
+      <h3>${p.title||'Untitled Plan'}</h3>
+      <div class="card-meta">${fmtDate(p.startDate)}${p.endDate&&p.endDate!==p.startDate?' – '+fmtDate(p.endDate):''}</div>
+      <div class="card-meta">${destCount} destination${destCount!==1?'s':''} · ${(p.flights||[]).length} flight${(p.flights||[]).length!==1?'s':''}</div>
+      <div class="card-dots">${dots}</div>
+    </div>`;
+  }).join('');
+}
+function hasOwner(p,o){
+  if((p.flights||[]).some(f=>f.owner===o||f.owner==='both'))return true;
+  for(const d of(p.destinations||[])){
+    if(d.transportation&&(d.transportation.owner===o||d.transportation.owner==='both'))return true;
+    if(d.hotel&&(d.hotel.owner===o||d.hotel.owner==='both'))return true;
+    if((d.activities||[]).some(a=>a.owner===o||a.owner==='both'))return true;
+  }
+  return false;
+}
+
+// ── Editor ────────────────────────────────────────────────
+async function openEditor(planId){
+  currentPlanId=planId;
+  const plans=await loadPlans();
+  const plan=planId?plans.find(p=>p.id===planId):null;
+  document.getElementById('editor-title').textContent=planId?'Edit Plan':'New Plan';
+  document.getElementById('f-title').value=plan?plan.title:'';
+  document.getElementById('f-start').value=plan?plan.startDate:'';
+  document.getElementById('f-end').value=plan?plan.endDate:'';
+  document.getElementById('f-notes').value=plan?plan.notes:'';
+  const fc=document.getElementById('flights-container');
+  fc.innerHTML='';
+  (plan?plan.flights:[]).forEach(f=>addFlight(f));
+  const dc=document.getElementById('destinations-container');
+  dc.innerHTML='';
+  (plan?plan.destinations:[]).forEach(d=>addDestination(d));
+  showEditor();
+}
+function editCurrentPlan(){openEditor(currentPlanId)}
+
+function addFlight(f){
+  f=f||{id:uid(),flightNo:'',date:'',from:'',to:'',owner:'both',status:'pending'};
+  const div=document.createElement('div');
+  div.className='item-block';div.dataset.fid=f.id;
+  div.innerHTML=`<div class="item-block-header"><span>✈ Flight</span><button class="btn btn-danger btn-sm" onclick="this.closest('.item-block').remove()">Remove</button></div>
+  <div class="form-row">
+    <div class="form-group"><label>Flight No.</label><input type="text" name="flightNo" value="${f.flightNo||''}" placeholder="CA123"></div>
+    <div class="form-group"><label>Date</label><input type="date" name="date" value="${f.date||''}"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>From</label><input type="text" name="from" value="${f.from||''}" placeholder="PEK"></div>
+    <div class="form-group"><label>To</label><input type="text" name="to" value="${f.to||''}" placeholder="HKG"></div>
+    <div class="form-group"><label>Owner</label>${ownerSelect('owner',f.owner||'both')}</div>
+    <div class="form-group"><label>Status</label>${statusSelect('status',f.status||'pending')}</div>
+  </div>`;
+  document.getElementById('flights-container').appendChild(div);
+}
+
+function addDestination(d){
+  d=d||{id:uid(),place:'',startDate:'',endDate:'',
+    transportation:{type:'high-speed-rail',detail:'',time:'',owner:'both',status:'pending'},
+    hotel:{name:'',checkIn:'',checkOut:'',confirmation:'',owner:'both',status:'pending'},
+    activities:[]};
+  const acts=(d.activities||[]).map(a=>activityRowHTML(a)).join('');
+  const transTypes=['high-speed-rail','cable-car','taxi','bus','metro','flight','other'];
+  const transLabels={'high-speed-rail':'High-speed Rail','cable-car':'Cable Car','taxi':'Taxi','bus':'Bus','metro':'Metro','flight':'Flight','other':'Other'};
+  const tOpts=transTypes.map(t=>`<option value="${t}"${(d.transportation&&d.transportation.type===t)?' selected':''}>${transLabels[t]}</option>`).join('');
+  const div=document.createElement('div');
+  div.className='item-block';div.dataset.did=d.id;
+  div.innerHTML=`<div class="item-block-header"><span>📍 Destination</span><button class="btn btn-danger btn-sm" onclick="this.closest('.item-block').remove()">Remove</button></div>
+  <div class="form-row">
+    <div class="form-group"><label>Place Name</label><input type="text" name="place" value="${d.place||''}" placeholder="Hong Kong"></div>
+    <div class="form-group"><label>Start Date</label><input type="date" name="startDate" value="${d.startDate||''}"></div>
+    <div class="form-group"><label>End Date</label><input type="date" name="endDate" value="${d.endDate||''}"></div>
+  </div>
+  <div class="sub-section">
+    <div class="sub-section-title">🚗 Transportation</div>
+    <div class="form-row">
+      <div class="form-group"><label>Type</label><select name="trans-type">${tOpts}</select></div>
+      <div class="form-group"><label>Detail / Train No.</label><input type="text" name="trans-detail" value="${d.transportation&&d.transportation.detail||''}" placeholder="G1234"></div>
+      <div class="form-group"><label>Departure Time</label><input type="time" name="trans-time" value="${d.transportation&&d.transportation.time||''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Owner</label>${ownerSelect('trans-owner',d.transportation&&d.transportation.owner||'both')}</div>
+      <div class="form-group"><label>Status</label>${statusSelect('trans-status',d.transportation&&d.transportation.status||'pending')}</div>
+    </div>
+  </div>
+  <div class="sub-section">
+    <div class="sub-section-title">🏨 Hotel</div>
+    <div class="form-row">
+      <div class="form-group"><label>Hotel Name</label><input type="text" name="hotel-name" value="${d.hotel&&d.hotel.name||''}" placeholder="Rosewood HK"></div>
+      <div class="form-group"><label>Confirmation #</label><input type="text" name="hotel-conf" value="${d.hotel&&d.hotel.confirmation||''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Check-in</label><input type="date" name="hotel-in" value="${d.hotel&&d.hotel.checkIn||''}"></div>
+      <div class="form-group"><label>Check-out</label><input type="date" name="hotel-out" value="${d.hotel&&d.hotel.checkOut||''}"></div>
+      <div class="form-group"><label>Owner</label>${ownerSelect('hotel-owner',d.hotel&&d.hotel.owner||'both')}</div>
+      <div class="form-group"><label>Status</label>${statusSelect('hotel-status',d.hotel&&d.hotel.status||'pending')}</div>
+    </div>
+  </div>
+  <div class="sub-section">
+    <div class="sub-section-title">🗺 Daily Activities</div>
+    <div class="activities-container">${acts}</div>
+    <button class="btn btn-ghost btn-sm" onclick="addActivityRow(this)">+ Add Activity</button>
+  </div>`;
+  document.getElementById('destinations-container').appendChild(div);
+}
+
+function activityRowHTML(a){
+  a=a||{id:uid(),time:'',description:'',owner:'both',status:'pending'};
+  return `<div class="activity-row" data-aid="${a.id}">
+    <input type="time" name="act-time" value="${a.time||''}" style="max-width:110px">
+    <input type="text" name="act-desc" value="${a.description||''}" placeholder="Activity description">
+    ${ownerSelect('act-owner',a.owner||'both')}
+    ${statusSelect('act-status',a.status||'pending')}
+    <button class="btn btn-danger btn-sm" onclick="this.closest('.activity-row').remove()">✕</button>
+  </div>`;
+}
+function addActivityRow(btn){
+  const container=btn.previousElementSibling;
+  container.insertAdjacentHTML('beforeend',activityRowHTML(null));
+}
+
+async function savePlanData(){
+  const title=document.getElementById('f-title').value.trim();
+  if(!title){alert('Please enter a plan title.');return;}
+  const plan={
+    id:currentPlanId||uid(),
+    title,
+    startDate:document.getElementById('f-start').value,
+    endDate:document.getElementById('f-end').value,
+    notes:document.getElementById('f-notes').value,
+    createdAt:new Date().toISOString(),
+    flights:[],
+    destinations:[]
+  };
+  // Flights
+  document.querySelectorAll('#flights-container .item-block').forEach(el=>{
+    plan.flights.push({
+      id:el.dataset.fid||uid(),
+      flightNo:el.querySelector('[name=flightNo]').value,
+      date:el.querySelector('[name=date]').value,
+      from:el.querySelector('[name=from]').value,
+      to:el.querySelector('[name=to]').value,
+      owner:el.querySelector('[name=owner]').value,
+      status:el.querySelector('[name=status]').value
+    });
+  });
+  // Destinations
+  document.querySelectorAll('#destinations-container .item-block').forEach(el=>{
+    const acts=[];
+    el.querySelectorAll('.activity-row').forEach(ar=>{
+      acts.push({
+        id:ar.dataset.aid||uid(),
+        time:ar.querySelector('[name=act-time]').value,
+        description:ar.querySelector('[name=act-desc]').value,
+        owner:ar.querySelector('[name=act-owner]').value,
+        status:ar.querySelector('[name=act-status]').value
+      });
+    });
+    plan.destinations.push({
+      id:el.dataset.did||uid(),
+      place:el.querySelector('[name=place]').value,
+      startDate:el.querySelector('[name=startDate]').value,
+      endDate:el.querySelector('[name=endDate]').value,
+      transportation:{
+        type:el.querySelector('[name=trans-type]').value,
+        detail:el.querySelector('[name=trans-detail]').value,
+        time:el.querySelector('[name=trans-time]').value,
+        owner:el.querySelector('[name=trans-owner]').value,
+        status:el.querySelector('[name=trans-status]').value
+      },
+      hotel:{
+        name:el.querySelector('[name=hotel-name]').value,
+        confirmation:el.querySelector('[name=hotel-conf]').value,
+        checkIn:el.querySelector('[name=hotel-in]').value,
+        checkOut:el.querySelector('[name=hotel-out]').value,
+        owner:el.querySelector('[name=hotel-owner]').value,
+        status:el.querySelector('[name=hotel-status]').value
+      },
+      activities:acts
+    });
+  });
+  await savePlan(plan);
+  currentPlanId=plan.id;
+  openDetail(plan.id);
+}
+
+// ── Detail View ───────────────────────────────────────────
+async function openDetail(planId){
+  currentPlanId=planId;
+  const plans=await loadPlans();
+  const plan=plans.find(p=>p.id===planId);
+  if(!plan){showDash();return;}
+  document.getElementById('detail-title').textContent=plan.title;
+  document.getElementById('detail-meta').innerHTML=
+    `<span>${fmtDate(plan.startDate)}${plan.endDate&&plan.endDate!==plan.startDate?' – '+fmtDate(plan.endDate):''}</span>` +
+    (plan.notes?`<span style="margin-left:16px;color:var(--muted)">${plan.notes}</span>`:'');
+  currentTab='table';
+  document.getElementById('tab-table').classList.add('active');
+  document.getElementById('tab-cal').classList.remove('active');
+  renderTableView(plan);
+  renderCalView(plan);
+  document.getElementById('detail-table-view').style.display='';
+  document.getElementById('detail-cal-view').style.display='none';
+  showDetail();
+}
+
+function switchTab(tab){
+  currentTab=tab;
+  document.getElementById('tab-table').classList.toggle('active',tab==='table');
+  document.getElementById('tab-cal').classList.toggle('active',tab==='cal');
+  document.getElementById('detail-table-view').style.display=tab==='table'?'':'none';
+  document.getElementById('detail-cal-view').style.display=tab==='cal'?'':'none';
+}
+
+function renderTableView(plan){
+  const rows=[];
+  let n=1;
+  const transLabels={'high-speed-rail':'High-speed Rail','cable-car':'Cable Car','taxi':'Taxi','bus':'Bus','metro':'Metro','flight':'Flight','other':'Other'};
+  (plan.flights||[]).forEach(f=>{
+    rows.push(`<tr class="${ownerRowClass(f.owner)}">
+      <td>${n++}</td><td><span class="cat-badge">✈ Flight</span></td>
+      <td><strong>${f.flightNo||'–'}</strong> · ${fmtDate(f.date)} · ${f.from||'–'} → ${f.to||'–'}</td>
+      <td>${ownerBadge(f.owner)}</td>
+      <td>${inlineStatusSel(f.status,`updateFlightStatus('${plan.id}','${f.id}',this.value)`)}</td>
+    </tr>`);
+  });
+  (plan.destinations||[]).forEach(d=>{
+    if(d.transportation&&d.transportation.type){
+      const t=d.transportation;
+      rows.push(`<tr class="${ownerRowClass(t.owner)}">
+        <td>${n++}</td><td><span class="cat-badge">🚗 Transport</span></td>
+        <td>${transLabels[t.type]||t.type}${t.detail?' · '+t.detail:''}${t.time?' · '+t.time:''} → ${d.place||'–'}</td>
+        <td>${ownerBadge(t.owner)}</td>
+        <td>${inlineStatusSel(t.status,`updateTransStatus('${plan.id}','${d.id}',this.value)`)}</td>
+      </tr>`);
+    }
+    if(d.hotel&&d.hotel.name){
+      const h=d.hotel;
+      rows.push(`<tr class="${ownerRowClass(h.owner)}">
+        <td>${n++}</td><td><span class="cat-badge">🏨 Hotel</span></td>
+        <td><strong>${h.name}</strong>${h.checkIn?' · '+fmtDate(h.checkIn)+' → '+fmtDate(h.checkOut):''}${h.confirmation?' · #'+h.confirmation:''}</td>
+        <td>${ownerBadge(h.owner)}</td>
+        <td>${inlineStatusSel(h.status,`updateHotelStatus('${plan.id}','${d.id}',this.value)`)}</td>
+      </tr>`);
+    }
+    (d.activities||[]).forEach(a=>{
+      rows.push(`<tr class="${ownerRowClass(a.owner)}">
+        <td>${n++}</td><td><span class="cat-badge">🗺 Activity</span></td>
+        <td>${a.time?'<strong>'+a.time+'</strong> · ':''} ${a.description||'–'} <span style="color:var(--muted);font-size:.8rem">@ ${d.place||'–'}</span></td>
+        <td>${ownerBadge(a.owner)}</td>
+        <td>${inlineStatusSel(a.status,`updateActivityStatus('${plan.id}','${d.id}','${a.id}',this.value)`)}</td>
+      </tr>`);
+    });
+  });
+  document.getElementById('detail-table-view').innerHTML=`
+    <div style="overflow-x:auto">
+    <table class="plan-table">
+      <thead><tr><th>#</th><th>Category</th><th>Details</th><th>Owner</th><th>Status</th></tr></thead>
+      <tbody>${rows.join('')||'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">No items yet. Edit the plan to add details.</td></tr>'}</tbody>
+    </table></div>`;
+}
+
+function renderCalView(plan){
+  // Flatten all items with a date
+  const items=[];
+  const transLabels={'high-speed-rail':'🚄 High-speed Rail','cable-car':'🚡 Cable Car','taxi':'🚕 Taxi','bus':'🚌 Bus','metro':'🚇 Metro','flight':'✈ Flight','other':'🚗 Other'};
+  (plan.flights||[]).forEach(f=>{
+    if(f.date)items.push({date:f.date,time:f.time||'',cat:'✈ Flight',details:(f.flightNo||'–')+' · '+(f.from||'–')+' → '+(f.to||'–'),owner:f.owner,status:f.status,updateFn:`updateFlightStatus('${plan.id}','${f.id}',this.value)`});
+  });
+  (plan.destinations||[]).forEach(d=>{
+    if(d.transportation&&d.transportation.type&&d.startDate){
+      const t=d.transportation;
+      items.push({date:d.startDate,time:t.time||'',cat:(transLabels[t.type]||t.type),details:(transLabels[t.type]||t.type).replace(/^.\s/,'')+(t.detail?' '+t.detail:'')+' → '+(d.place||'–'),owner:t.owner,status:t.status,updateFn:`updateTransStatus('${plan.id}','${d.id}',this.value)`});
+    }
+    if(d.hotel&&d.hotel.name&&d.hotel.checkIn){
+      const h=d.hotel;
+      items.push({date:h.checkIn,time:'',cat:'🏨 Hotel',details:'Check-in: '+h.name+(h.checkOut?' (out '+fmtDate(h.checkOut)+')':''),owner:h.owner,status:h.status,updateFn:`updateHotelStatus('${plan.id}','${d.id}',this.value)`});
+    }
+    (d.activities||[]).forEach(a=>{
+      if(d.startDate)items.push({date:d.startDate,time:a.time||'',cat:'🗺 Activity',details:a.description+(d.place?' @ '+d.place:''),owner:a.owner,status:a.status,updateFn:`updateActivityStatus('${plan.id}','${d.id}','${a.id}',this.value)`});
+    });
+  });
+  // Sort by date then time
+  items.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'99:99').localeCompare(b.time||'99:99'));
+  // Group by date
+  const byDate={};
+  items.forEach(item=>{if(!byDate[item.date])byDate[item.date]=[];byDate[item.date].push(item);});
+  const dates=Object.keys(byDate).sort();
+  if(!dates.length){
+    document.getElementById('detail-cal-view').innerHTML=`<div style="text-align:center;padding:60px;color:var(--muted)">No dated items yet. Add dates to flights, destinations, and activities.</div>`;
+    return;
+  }
+  const html=dates.map(date=>{
+    const dayItems=byDate[date];
+    const rows=dayItems.map(item=>`<tr class="${ownerRowClass(item.owner)}">
+      <td style="min-width:60px;font-weight:600">${item.time||'–'}</td>
+      <td>${item.details}</td>
+      <td><span class="cat-badge" style="font-size:.75rem">${item.cat}</span></td>
+      <td>${ownerBadge(item.owner)}</td>
+      <td>${inlineStatusSel(item.status,item.updateFn)}</td>
+    </tr>`).join('');
+    return `<div class="cal-day">
+      <div class="cal-day-header">📅 ${fmtDateLong(date)}</div>
+      <div style="overflow-x:auto"><table class="cal-table">
+        <thead><tr><th>Time</th><th>Details</th><th>Category</th><th>Owner</th><th>Status</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
+  }).join('');
+  document.getElementById('detail-cal-view').innerHTML=html;
+}
+
+// ── Status Update Functions ───────────────────────────────
+async function updateFlightStatus(planId,fid,val){
+  const plans=await loadPlans();const plan=plans.find(p=>p.id===planId);if(!plan)return;
+  const f=plan.flights.find(f=>f.id===fid);if(f)f.status=val;
+  await savePlan(plan);
+}
+async function updateTransStatus(planId,did,val){
+  const plans=await loadPlans();const plan=plans.find(p=>p.id===planId);if(!plan)return;
+  const d=plan.destinations.find(d=>d.id===did);if(d&&d.transportation)d.transportation.status=val;
+  await savePlan(plan);
+}
+async function updateHotelStatus(planId,did,val){
+  const plans=await loadPlans();const plan=plans.find(p=>p.id===planId);if(!plan)return;
+  const d=plan.destinations.find(d=>d.id===did);if(d&&d.hotel)d.hotel.status=val;
+  await savePlan(plan);
+}
+async function updateActivityStatus(planId,did,aid,val){
+  const plans=await loadPlans();const plan=plans.find(p=>p.id===planId);if(!plan)return;
+  const d=plan.destinations.find(d=>d.id===did);if(!d)return;
+  const a=(d.activities||[]).find(a=>a.id===aid);if(a)a.status=val;
+  await savePlan(plan);
+}
+
+// ── Delete Plan ───────────────────────────────────────────
+async function deleteCurrentPlan(){
+  if(!confirm('Delete this plan? This cannot be undone.'))return;
+  await deletePlan(currentPlanId);
+  currentPlanId=null;
+  showDash();
+}
+
+// ── Init ──────────────────────────────────────────────────
+document.getElementById('login-screen').style.display='flex';
+document.getElementById('app-screen').style.display='none';
+</script>
+</body>
+</html>

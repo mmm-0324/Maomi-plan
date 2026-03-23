@@ -270,13 +270,21 @@ async function deletePlan(id){
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 
 // ── Auth ─────────────────────────────────────────────────
-function doLogin(){
+async function doLogin(){
   const v=document.getElementById('pwd-input').value;
   if(v===PASSWORD){
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('app-screen').style.display='block';
+    const btn=document.querySelector('.login-card .btn-primary');
+    btn.textContent='Loading...';btn.disabled=true;
     document.getElementById('login-error').textContent='';
-    showDash();
+    try{
+      await showDash();
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('app-screen').style.display='block';
+    }catch(e){
+      document.getElementById('login-error').textContent='Connection error, please try again.';
+    }finally{
+      btn.textContent='Enter';btn.disabled=false;
+    }
   } else {
     const card=document.getElementById('login-card');
     card.classList.remove('shake');void card.offsetWidth;card.classList.add('shake');
@@ -335,11 +343,11 @@ function fmtDateLong(d){
 }
 
 // ── Navigation ────────────────────────────────────────────
-function showDash(){
+async function showDash(){
   document.getElementById('dash').style.display='';
   document.getElementById('editor').style.display='none';
   document.getElementById('detail').style.display='none';
-  renderDash();
+  await renderDash();
 }
 function showEditor(){
   document.getElementById('dash').style.display='none';

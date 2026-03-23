@@ -247,7 +247,9 @@ textarea{resize:vertical;min-height:80px}
 const PASSWORD = '230605';
 const SUPABASE_URL = 'https://gbvgbwxxgmznqvganmau.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_-3xmapx6Rgjim9rcPfKrIA_XYhBi1-e';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+window.mmPlanSupabaseClient =
+  window.mmPlanSupabaseClient ||
+  window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── State ────────────────────────────────────────────────
 let currentPlanId = null;
@@ -255,22 +257,22 @@ let currentTab = 'table';
 
 // ── Storage ──────────────────────────────────────────────
 async function loadPlans(){
-  const {data,error}=await supabase.from('plans').select('*').order('created_at',{ascending:false});
+  const {data,error}=await window.mmPlanSupabaseClient.from('plans').select('*').order('created_at',{ascending:false});
   if(error){console.error(error);return[];}
   return data.map(row=>({id:row.id,...row.data}));
 }
 async function savePlan(plan){
-  const {error}=await supabase.from('plans').upsert({id:plan.id,data:plan,updated_at:new Date().toISOString()});
+  const {error}=await window.mmPlanSupabaseClient.from('plans').upsert({id:plan.id,data:plan,updated_at:new Date().toISOString()});
   if(error)console.error(error);
 }
 async function deletePlan(id){
-  const {error}=await supabase.from('plans').delete().eq('id',id);
+  const {error}=await window.mmPlanSupabaseClient.from('plans').delete().eq('id',id);
   if(error)console.error(error);
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 
 // ── Auth ─────────────────────────────────────────────────
-async function doLogin(){
+window.doLogin = async function(){
   const v=document.getElementById('pwd-input').value;
   if(v===PASSWORD){
     const btn=document.querySelector('.login-card .btn-primary');
@@ -291,7 +293,7 @@ async function doLogin(){
     document.getElementById('login-error').textContent='Incorrect password. Please try again.';
   }
 }
-function doLogout(){
+window.doLogout = function(){
   document.getElementById('app-screen').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('pwd-input').value='';

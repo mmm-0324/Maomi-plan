@@ -17,6 +17,8 @@
   --s-confirmed-bg:#e1f0ff;--s-confirmed-c:#2563a8;
   --s-completed-bg:#e1f5ec;--s-completed-c:#1f7a52;
   --s-cancelled-bg:#fde8e8;--s-cancelled-c:#b93333;
+  --type-activity-bg:#eef4ff;--type-activity-c:#4069bf;
+  --type-other-bg:#f4efff;--type-other-c:#7a58b7;
   --shadow:0 4px 18px rgba(155,142,196,.15);
   --radius:14px;
 }
@@ -51,7 +53,7 @@ header{background:linear-gradient(90deg,#c8dff5 0%,#f5c8d8 100%);padding:0 32px;
 .h-right{display:flex;gap:10px;align-items:center}
 
 /* MAIN CONTENT */
-.main{max-width:960px;margin:0 auto;padding:32px 20px}
+.main{max-width:1180px;margin:0 auto;padding:32px 20px}
 
 /* DASHBOARD */
 .dash-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
@@ -86,9 +88,16 @@ textarea{resize:vertical;min-height:80px}
 .item-block-header span{font-weight:700;font-size:.9rem;color:var(--accent)}
 .sub-section{background:#fff;border-radius:8px;padding:14px;margin-bottom:12px;border:1px solid var(--border)}
 .sub-section-title{font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
-.activity-row{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
-.activity-row>*{flex:1;min-width:100px}
-.activity-row>.btn{flex:0;min-width:auto}
+.schedule-row{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:nowrap}
+.schedule-row > *{min-width:0}
+.schedule-date{width:136px;flex:0 0 136px}
+.schedule-time{width:104px;flex:0 0 104px}
+.schedule-type{width:120px;flex:0 0 120px}
+.schedule-desc{flex:1 1 240px;min-width:180px}
+.schedule-owner{width:130px;flex:0 0 130px}
+.schedule-status{width:130px;flex:0 0 130px}
+.schedule-remove{width:44px;flex:0 0 44px;padding:10px 0}
+.section-actions{margin-top:8px}
 
 .editor-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:8px}
 
@@ -117,6 +126,10 @@ textarea{resize:vertical;min-height:80px}
 .st-completed{background:var(--s-completed-bg);color:var(--s-completed-c)}
 .st-cancelled{background:var(--s-cancelled-bg);color:var(--s-cancelled-c)}
 .cat-badge{padding:3px 10px;border-radius:6px;font-size:.78rem;background:#f0ecfa;color:var(--accent);font-weight:600}
+.type-badge{padding:4px 10px;border-radius:999px;font-size:.76rem;font-weight:700;white-space:nowrap}
+.type-activity{background:var(--type-activity-bg);color:var(--type-activity-c)}
+.type-other{background:var(--type-other-bg);color:var(--type-other-c)}
+.time-range{white-space:nowrap;font-weight:700}
 
 /* CALENDAR VIEW */
 .cal-day{margin-bottom:28px}
@@ -127,11 +140,16 @@ textarea{resize:vertical;min-height:80px}
 .cal-table tr:last-child td{border-bottom:none}
 
 /* RESPONSIVE */
+@media(max-width:980px){
+  .schedule-row{flex-wrap:wrap}
+  .schedule-date,.schedule-time,.schedule-type,.schedule-owner,.schedule-status{flex:1 1 140px;width:auto}
+  .schedule-desc{flex:1 1 100%}
+  .schedule-remove{width:auto;flex:0 0 auto}
+}
 @media(max-width:600px){
   .main{padding:16px 12px}
   .form-row{flex-direction:column}
   .plan-grid{grid-template-columns:1fr}
-  .activity-row{flex-direction:column}
   header{padding:0 16px}
   .plan-table,.cal-table{font-size:.8rem}
   .plan-table td,.plan-table th,.cal-table td,.cal-table th{padding:8px 10px}
@@ -146,7 +164,6 @@ textarea{resize:vertical;min-height:80px}
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-screen" class="screen active">
   <div class="login-card" id="login-card">
     <div class="login-logo"><span class="lm">M</span><span class="lamp">&amp;</span><span class="lm2">M</span></div>
@@ -157,7 +174,6 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
-<!-- MAIN APP -->
 <div id="app-screen" class="screen">
   <header>
     <div class="h-logo"><span class="lm">M</span><span class="lamp">&amp;</span><span class="lm2">M</span> <span style="font-weight:400;font-size:.9rem;color:#5a4a6a;letter-spacing:1px">PLAN</span></div>
@@ -166,7 +182,6 @@ textarea{resize:vertical;min-height:80px}
     </div>
   </header>
 
-  <!-- DASHBOARD -->
   <div id="dash" class="main">
     <div class="dash-top">
       <h2>Our Plans</h2>
@@ -175,40 +190,35 @@ textarea{resize:vertical;min-height:80px}
     <div id="plan-grid" class="plan-grid"></div>
   </div>
 
-  <!-- EDITOR -->
   <div id="editor" class="main" style="display:none">
     <div class="editor-header">
       <button class="btn btn-ghost btn-sm" onclick="showDash()">← Back</button>
       <h2 id="editor-title">New Plan</h2>
     </div>
 
-    <!-- Trip Info -->
     <div class="section-card">
       <div class="section-title"><span class="icon">🗺</span> Trip Info</div>
       <div class="form-row">
         <div class="form-group full"><label>Plan Title</label><input type="text" id="f-title" placeholder="e.g. Summer 2026 Meetup"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Start Date</label><input type="date" id="f-start"></div>
-        <div class="form-group"><label>End Date</label><input type="date" id="f-end"></div>
+        <div class="form-group"><label>Start Date</label><input type="date" id="f-start" lang="en"></div>
+        <div class="form-group"><label>End Date</label><input type="date" id="f-end" lang="en"></div>
       </div>
     </div>
 
-    <!-- Flights -->
     <div class="section-card">
       <div class="section-title"><span class="icon">✈️</span> Flights</div>
       <div id="flights-container"></div>
       <button class="btn btn-ghost btn-sm" onclick="addFlight()">+ Add Flight</button>
     </div>
 
-    <!-- Destinations -->
     <div class="section-card">
       <div class="section-title"><span class="icon">📍</span> Destinations</div>
       <div id="destinations-container"></div>
       <button class="btn btn-ghost btn-sm" onclick="addDestination()">+ Add Destination</button>
     </div>
 
-    <!-- Notes -->
     <div class="section-card">
       <div class="section-title"><span class="icon">📝</span> Notes</div>
       <textarea id="f-notes" placeholder="Any additional notes..."></textarea>
@@ -220,7 +230,6 @@ textarea{resize:vertical;min-height:80px}
     </div>
   </div>
 
-  <!-- DETAIL VIEW -->
   <div id="detail" class="main" style="display:none">
     <div class="detail-header">
       <div style="display:flex;align-items:center;gap:14px">
@@ -243,26 +252,25 @@ textarea{resize:vertical;min-height:80px}
 </div>
 
 <script>
-// ── Config ──────────────────────────────────────────────
 const PASSWORD = '230605';
 const SUPABASE_URL = 'https://gbvgbwxxgmznqvganmau.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_-3xmapx6Rgjim9rcPfKrIA_XYhBi1-e';
+
 window.mmPlanSupabaseClient =
   window.mmPlanSupabaseClient ||
   window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ── State ────────────────────────────────────────────────
 let currentPlanId = null;
 let currentTab = 'table';
 
-// ── Storage ──────────────────────────────────────────────
 async function loadPlans(){
   const {data,error}=await window.mmPlanSupabaseClient.from('plans').select('*').order('created_at',{ascending:false});
   if(error){console.error(error);return[];}
-  return data.map(row=>({id:row.id,...row.data}));
+  return data.map(row=>normalizePlan({id:row.id,...row.data}));
 }
 async function savePlan(plan){
-  const {error}=await window.mmPlanSupabaseClient.from('plans').upsert({id:plan.id,data:plan,updated_at:new Date().toISOString()});
+  const payload = normalizePlan(plan);
+  const {error}=await window.mmPlanSupabaseClient.from('plans').upsert({id:payload.id,data:payload,updated_at:new Date().toISOString()});
   if(error)console.error(error);
 }
 async function deletePlan(id){
@@ -271,7 +279,55 @@ async function deletePlan(id){
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 
-// ── Auth ─────────────────────────────────────────────────
+function normalizePlan(plan){
+  const p = {...plan};
+  p.flights = (p.flights || []).map(f => ({
+    id: f.id || uid(),
+    flightNo: f.flightNo || '',
+    date: f.date || '',
+    time: f.time || '',
+    from: f.from || '',
+    to: f.to || '',
+    owner: f.owner || 'both',
+    status: f.status || 'pending'
+  }));
+  p.destinations = (p.destinations || []).map(d => {
+    const rawItems = d.scheduleItems || d.activities || [];
+    return {
+      id: d.id || uid(),
+      place: d.place || '',
+      startDate: d.startDate || '',
+      endDate: d.endDate || '',
+      transportation: {
+        type: d.transportation?.type || 'high-speed-rail',
+        detail: d.transportation?.detail || '',
+        time: d.transportation?.time || '',
+        owner: d.transportation?.owner || 'both',
+        status: d.transportation?.status || 'pending'
+      },
+      hotel: {
+        name: d.hotel?.name || '',
+        checkIn: d.hotel?.checkIn || '',
+        checkOut: d.hotel?.checkOut || '',
+        confirmation: d.hotel?.confirmation || '',
+        owner: d.hotel?.owner || 'both',
+        status: d.hotel?.status || 'pending'
+      },
+      scheduleItems: rawItems.map(item => ({
+        id: item.id || uid(),
+        date: item.date || d.startDate || '',
+        startTime: item.startTime || item.time || '',
+        endTime: item.endTime || '',
+        type: (item.type || 'activity').toLowerCase() === 'other' ? 'other' : 'activity',
+        description: item.description || '',
+        owner: item.owner || 'both',
+        status: item.status || 'pending'
+      }))
+    };
+  });
+  return p;
+}
+
 window.doLogin = async function(){
   const v=document.getElementById('pwd-input').value;
   if(v===PASSWORD){
@@ -283,6 +339,7 @@ window.doLogin = async function(){
       document.getElementById('login-screen').style.display='none';
       document.getElementById('app-screen').style.display='block';
     }catch(e){
+      console.error(e);
       document.getElementById('login-error').textContent='Connection error, please try again.';
     }finally{
       btn.textContent='Enter';btn.disabled=false;
@@ -300,7 +357,6 @@ window.doLogout = function(){
 }
 document.getElementById('pwd-input').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 
-// ── Helpers ───────────────────────────────────────────────
 function ownerBadge(o){
   const m={minami:['ob-minami','Minami'],maomao:['ob-maomao','Maomao'],both:['ob-both','Both']};
   const[cls,lbl]=m[o]||m.both;
@@ -308,7 +364,6 @@ function ownerBadge(o){
 }
 function ownerRowClass(o){return{minami:'row-minami',maomao:'row-maomao',both:'row-both'}[o]||'row-both'}
 function statusClass(s){return{pending:'st-pending',confirmed:'st-confirmed',completed:'st-completed',cancelled:'st-cancelled'}[s]||'st-pending'}
-function statusLabel(s){return{pending:'Pending',confirmed:'Confirmed',completed:'Completed',cancelled:'Cancelled'}[s]||'Pending'}
 function ownerSelect(name,val){
   return `<select name="${name}" class="form-control" style="padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:.85rem">
     <option value="minami"${val==='minami'?' selected':''}>Minami</option>
@@ -324,6 +379,12 @@ function statusSelect(name,val){
     <option value="cancelled"${val==='cancelled'?' selected':''}>Cancelled</option>
   </select>`;
 }
+function typeSelect(name,val){
+  return `<select name="${name}" class="form-control" style="padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:.85rem">
+    <option value="activity"${val==='activity'?' selected':''}>Activity</option>
+    <option value="other"${val==='other'?' selected':''}>Other</option>
+  </select>`;
+}
 function inlineStatusSel(status, onchangeCode){
   const sc=statusClass(status);
   return `<select class="status-sel ${sc}" onchange="${onchangeCode};this.className='status-sel '+statusClass(this.value)">
@@ -332,6 +393,11 @@ function inlineStatusSel(status, onchangeCode){
     <option value="completed"${status==='completed'?' selected':''}>Completed</option>
     <option value="cancelled"${status==='cancelled'?' selected':''}>Cancelled</option>
   </select>`;
+}
+function typeBadge(type){
+  const cls = type === 'other' ? 'type-other' : 'type-activity';
+  const label = type === 'other' ? 'Other' : 'Activity';
+  return `<span class="type-badge ${cls}">${label}</span>`;
 }
 function fmtDate(d){
   if(!d)return'–';
@@ -343,8 +409,26 @@ function fmtDateLong(d){
   const dt=new Date(d+'T12:00:00');
   return dt.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 }
+function fmtTimeRange(start,end){
+  if(start && end) return `${start}–${end}`;
+  if(start) return start;
+  if(end) return `Until ${end}`;
+  return '–';
+}
+function sortScheduleItems(items){
+  return [...items].sort((a,b)=>{
+    const da=(a.date||'9999-12-31');
+    const db=(b.date||'9999-12-31');
+    if(da!==db)return da.localeCompare(db);
+    const sa=(a.startTime||'99:99');
+    const sb=(b.startTime||'99:99');
+    if(sa!==sb)return sa.localeCompare(sb);
+    const ea=(a.endTime||'99:99');
+    const eb=(b.endTime||'99:99');
+    return ea.localeCompare(eb);
+  });
+}
 
-// ── Navigation ────────────────────────────────────────────
 async function showDash(){
   document.getElementById('dash').style.display='';
   document.getElementById('editor').style.display='none';
@@ -362,7 +446,6 @@ function showDetail(){
   document.getElementById('detail').style.display='';
 }
 
-// ── Dashboard ─────────────────────────────────────────────
 async function renderDash(){
   const plans=await loadPlans();
   const grid=document.getElementById('plan-grid');
@@ -387,12 +470,11 @@ function hasOwner(p,o){
   for(const d of(p.destinations||[])){
     if(d.transportation&&(d.transportation.owner===o||d.transportation.owner==='both'))return true;
     if(d.hotel&&(d.hotel.owner===o||d.hotel.owner==='both'))return true;
-    if((d.activities||[]).some(a=>a.owner===o||a.owner==='both'))return true;
+    if((d.scheduleItems||[]).some(a=>a.owner===o||a.owner==='both'))return true;
   }
   return false;
 }
 
-// ── Editor ────────────────────────────────────────────────
 async function openEditor(planId){
   currentPlanId=planId;
   const plans=await loadPlans();
@@ -419,7 +501,7 @@ function addFlight(f){
   div.innerHTML=`<div class="item-block-header"><span>✈ Flight</span><button class="btn btn-danger btn-sm" onclick="this.closest('.item-block').remove()">Remove</button></div>
   <div class="form-row">
     <div class="form-group"><label>Flight No.</label><input type="text" name="flightNo" value="${f.flightNo||''}" placeholder="CA123"></div>
-    <div class="form-group"><label>Date</label><input type="date" name="date" value="${f.date||''}"></div>
+    <div class="form-group"><label>Date</label><input type="date" name="date" value="${f.date||''}" lang="en"></div>
   </div>
   <div class="form-row">
     <div class="form-group"><label>From</label><input type="text" name="from" value="${f.from||''}" placeholder="PEK"></div>
@@ -431,11 +513,8 @@ function addFlight(f){
 }
 
 function addDestination(d){
-  d=d||{id:uid(),place:'',startDate:'',endDate:'',
-    transportation:{type:'high-speed-rail',detail:'',time:'',owner:'both',status:'pending'},
-    hotel:{name:'',checkIn:'',checkOut:'',confirmation:'',owner:'both',status:'pending'},
-    activities:[]};
-  const acts=(d.activities||[]).map(a=>activityRowHTML(a)).join('');
+  d = normalizePlan({destinations:[d||{}]}).destinations[0];
+  const itemsHtml=sortScheduleItems(d.scheduleItems||[]).map(item=>scheduleItemRowHTML(item)).join('');
   const transTypes=['high-speed-rail','cable-car','taxi','bus','metro','flight','other'];
   const transLabels={'high-speed-rail':'High-speed Rail','cable-car':'Cable Car','taxi':'Taxi','bus':'Bus','metro':'Metro','flight':'Flight','other':'Other'};
   const tOpts=transTypes.map(t=>`<option value="${t}"${(d.transportation&&d.transportation.type===t)?' selected':''}>${transLabels[t]}</option>`).join('');
@@ -444,8 +523,8 @@ function addDestination(d){
   div.innerHTML=`<div class="item-block-header"><span>📍 Destination</span><button class="btn btn-danger btn-sm" onclick="this.closest('.item-block').remove()">Remove</button></div>
   <div class="form-row">
     <div class="form-group"><label>Place Name</label><input type="text" name="place" value="${d.place||''}" placeholder="Hong Kong"></div>
-    <div class="form-group"><label>Start Date</label><input type="date" name="startDate" value="${d.startDate||''}"></div>
-    <div class="form-group"><label>End Date</label><input type="date" name="endDate" value="${d.endDate||''}"></div>
+    <div class="form-group"><label>Start Date</label><input type="date" name="startDate" value="${d.startDate||''}" lang="en"></div>
+    <div class="form-group"><label>End Date</label><input type="date" name="endDate" value="${d.endDate||''}" lang="en"></div>
   </div>
   <div class="sub-section">
     <div class="sub-section-title">🚗 Transportation</div>
@@ -466,49 +545,53 @@ function addDestination(d){
       <div class="form-group"><label>Confirmation #</label><input type="text" name="hotel-conf" value="${d.hotel&&d.hotel.confirmation||''}"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Check-in</label><input type="date" name="hotel-in" value="${d.hotel&&d.hotel.checkIn||''}"></div>
-      <div class="form-group"><label>Check-out</label><input type="date" name="hotel-out" value="${d.hotel&&d.hotel.checkOut||''}"></div>
+      <div class="form-group"><label>Check-in</label><input type="date" name="hotel-in" value="${d.hotel&&d.hotel.checkIn||''}" lang="en"></div>
+      <div class="form-group"><label>Check-out</label><input type="date" name="hotel-out" value="${d.hotel&&d.hotel.checkOut||''}" lang="en"></div>
       <div class="form-group"><label>Owner</label>${ownerSelect('hotel-owner',d.hotel&&d.hotel.owner||'both')}</div>
       <div class="form-group"><label>Status</label>${statusSelect('hotel-status',d.hotel&&d.hotel.status||'pending')}</div>
     </div>
   </div>
   <div class="sub-section">
-    <div class="sub-section-title">🗺 Daily Activities</div>
-    <div class="activities-container">${acts}</div>
-    <button class="btn btn-ghost btn-sm" onclick="addActivityRow(this)">+ Add Activity</button>
+    <div class="sub-section-title">🗓 Schedule Items</div>
+    <div class="schedule-items-container">${itemsHtml}</div>
+    <div class="section-actions"><button class="btn btn-ghost btn-sm" onclick="addScheduleItemRow(this)">+ Add Item</button></div>
   </div>`;
   document.getElementById('destinations-container').appendChild(div);
 }
 
-function activityRowHTML(a){
-  a=a||{id:uid(),time:'',description:'',owner:'both',status:'pending'};
-  return `<div class="activity-row" data-aid="${a.id}">
-    <input type="time" name="act-time" value="${a.time||''}" style="max-width:110px">
-    <input type="text" name="act-desc" value="${a.description||''}" placeholder="Activity description">
-    ${ownerSelect('act-owner',a.owner||'both')}
-    ${statusSelect('act-status',a.status||'pending')}
-    <button class="btn btn-danger btn-sm" onclick="this.closest('.activity-row').remove()">✕</button>
+function scheduleItemRowHTML(item){
+  const i = item || {id:uid(),date:'',startTime:'',endTime:'',type:'activity',description:'',owner:'both',status:'pending'};
+  return `<div class="schedule-row" data-sid="${i.id}">
+    <input type="date" name="item-date" value="${i.date||''}" lang="en" class="schedule-date">
+    <input type="time" name="item-start" value="${i.startTime||''}" class="schedule-time">
+    <input type="time" name="item-end" value="${i.endTime||''}" class="schedule-time">
+    <div class="schedule-type">${typeSelect('item-type',i.type||'activity')}</div>
+    <input type="text" name="item-desc" value="${i.description||''}" placeholder="Description" class="schedule-desc">
+    <div class="schedule-owner">${ownerSelect('item-owner',i.owner||'both')}</div>
+    <div class="schedule-status">${statusSelect('item-status',i.status||'pending')}</div>
+    <button class="btn btn-danger btn-sm schedule-remove" onclick="this.closest('.schedule-row').remove()">✕</button>
   </div>`;
 }
-function addActivityRow(btn){
-  const container=btn.previousElementSibling;
-  container.insertAdjacentHTML('beforeend',activityRowHTML(null));
+function addScheduleItemRow(btn){
+  const container=btn.closest('.sub-section').querySelector('.schedule-items-container');
+  container.insertAdjacentHTML('beforeend',scheduleItemRowHTML(null));
 }
 
 async function savePlanData(){
   const title=document.getElementById('f-title').value.trim();
   if(!title){alert('Please enter a plan title.');return;}
+  const existingPlans = await loadPlans();
+  const existing = existingPlans.find(p => p.id === currentPlanId);
   const plan={
     id:currentPlanId||uid(),
     title,
     startDate:document.getElementById('f-start').value,
     endDate:document.getElementById('f-end').value,
     notes:document.getElementById('f-notes').value,
-    createdAt:new Date().toISOString(),
+    createdAt: existing?.createdAt || new Date().toISOString(),
     flights:[],
     destinations:[]
   };
-  // Flights
   document.querySelectorAll('#flights-container .item-block').forEach(el=>{
     plan.flights.push({
       id:el.dataset.fid||uid(),
@@ -520,16 +603,18 @@ async function savePlanData(){
       status:el.querySelector('[name=status]').value
     });
   });
-  // Destinations
   document.querySelectorAll('#destinations-container .item-block').forEach(el=>{
-    const acts=[];
-    el.querySelectorAll('.activity-row').forEach(ar=>{
-      acts.push({
-        id:ar.dataset.aid||uid(),
-        time:ar.querySelector('[name=act-time]').value,
-        description:ar.querySelector('[name=act-desc]').value,
-        owner:ar.querySelector('[name=act-owner]').value,
-        status:ar.querySelector('[name=act-status]').value
+    const scheduleItems=[];
+    el.querySelectorAll('.schedule-row').forEach(sr=>{
+      scheduleItems.push({
+        id:sr.dataset.sid||uid(),
+        date:sr.querySelector('[name=item-date]').value,
+        startTime:sr.querySelector('[name=item-start]').value,
+        endTime:sr.querySelector('[name=item-end]').value,
+        type:sr.querySelector('[name=item-type]').value,
+        description:sr.querySelector('[name=item-desc]').value,
+        owner:sr.querySelector('[name=item-owner]').value,
+        status:sr.querySelector('[name=item-status]').value
       });
     });
     plan.destinations.push({
@@ -552,7 +637,7 @@ async function savePlanData(){
         owner:el.querySelector('[name=hotel-owner]').value,
         status:el.querySelector('[name=hotel-status]').value
       },
-      activities:acts
+      scheduleItems:sortScheduleItems(scheduleItems)
     });
   });
   await savePlan(plan);
@@ -560,7 +645,6 @@ async function savePlanData(){
   openDetail(plan.id);
 }
 
-// ── Detail View ───────────────────────────────────────────
 async function openDetail(planId){
   currentPlanId=planId;
   const plans=await loadPlans();
@@ -619,12 +703,13 @@ function renderTableView(plan){
         <td>${inlineStatusSel(h.status,`updateHotelStatus('${plan.id}','${d.id}',this.value)`)}</td>
       </tr>`);
     }
-    (d.activities||[]).forEach(a=>{
-      rows.push(`<tr class="${ownerRowClass(a.owner)}">
-        <td>${n++}</td><td><span class="cat-badge">🗺 Activity</span></td>
-        <td>${a.time?'<strong>'+a.time+'</strong> · ':''} ${a.description||'–'} <span style="color:var(--muted);font-size:.8rem">@ ${d.place||'–'}</span></td>
-        <td>${ownerBadge(a.owner)}</td>
-        <td>${inlineStatusSel(a.status,`updateActivityStatus('${plan.id}','${d.id}','${a.id}',this.value)`)}</td>
+    sortScheduleItems(d.scheduleItems||[]).forEach(item=>{
+      rows.push(`<tr class="${ownerRowClass(item.owner)}">
+        <td>${n++}</td>
+        <td>${typeBadge(item.type)}</td>
+        <td><span class="time-range">${fmtDate(item.date)} · ${fmtTimeRange(item.startTime,item.endTime)}</span> · ${item.description||'–'} <span style="color:var(--muted);font-size:.8rem">${d.place ? '@ '+d.place : ''}</span></td>
+        <td>${ownerBadge(item.owner)}</td>
+        <td>${inlineStatusSel(item.status,`updateScheduleStatus('${plan.id}','${d.id}','${item.id}',this.value)`)}</td>
       </tr>`);
     });
   });
@@ -637,41 +722,77 @@ function renderTableView(plan){
 }
 
 function renderCalView(plan){
-  // Flatten all items with a date
   const items=[];
   const transLabels={'high-speed-rail':'🚄 High-speed Rail','cable-car':'🚡 Cable Car','taxi':'🚕 Taxi','bus':'🚌 Bus','metro':'🚇 Metro','flight':'✈ Flight','other':'🚗 Other'};
   (plan.flights||[]).forEach(f=>{
-    if(f.date)items.push({date:f.date,time:f.time||'',cat:'✈ Flight',details:(f.flightNo||'–')+' · '+(f.from||'–')+' → '+(f.to||'–'),owner:f.owner,status:f.status,updateFn:`updateFlightStatus('${plan.id}','${f.id}',this.value)`});
+    if(f.date)items.push({
+      date:f.date,
+      startTime:f.time||'',
+      endTime:'',
+      category:`<span class="cat-badge">✈ Flight</span>`,
+      details:`${f.flightNo||'–'} · ${f.from||'–'} → ${f.to||'–'}`,
+      owner:f.owner,
+      status:f.status,
+      updateFn:`updateFlightStatus('${plan.id}','${f.id}',this.value)`
+    });
   });
   (plan.destinations||[]).forEach(d=>{
     if(d.transportation&&d.transportation.type&&d.startDate){
       const t=d.transportation;
-      items.push({date:d.startDate,time:t.time||'',cat:(transLabels[t.type]||t.type),details:(transLabels[t.type]||t.type).replace(/^.\s/,'')+(t.detail?' '+t.detail:'')+' → '+(d.place||'–'),owner:t.owner,status:t.status,updateFn:`updateTransStatus('${plan.id}','${d.id}',this.value)`});
+      items.push({
+        date:d.startDate,
+        startTime:t.time||'',
+        endTime:'',
+        category:`<span class="cat-badge">${transLabels[t.type]||t.type}</span>`,
+        details:`${(transLabels[t.type]||t.type).replace(/^.\s/,'')}${t.detail?' · '+t.detail:''}${d.place?' → '+d.place:''}`,
+        owner:t.owner,
+        status:t.status,
+        updateFn:`updateTransStatus('${plan.id}','${d.id}',this.value)`
+      });
     }
     if(d.hotel&&d.hotel.name&&d.hotel.checkIn){
       const h=d.hotel;
-      items.push({date:h.checkIn,time:'',cat:'🏨 Hotel',details:'Check-in: '+h.name+(h.checkOut?' (out '+fmtDate(h.checkOut)+')':''),owner:h.owner,status:h.status,updateFn:`updateHotelStatus('${plan.id}','${d.id}',this.value)`});
+      items.push({
+        date:h.checkIn,
+        startTime:'',
+        endTime:'',
+        category:`<span class="cat-badge">🏨 Hotel</span>`,
+        details:`Check-in: ${h.name}${h.checkOut?' (out '+fmtDate(h.checkOut)+')':''}`,
+        owner:h.owner,
+        status:h.status,
+        updateFn:`updateHotelStatus('${plan.id}','${d.id}',this.value)`
+      });
     }
-    (d.activities||[]).forEach(a=>{
-      if(d.startDate)items.push({date:d.startDate,time:a.time||'',cat:'🗺 Activity',details:a.description+(d.place?' @ '+d.place:''),owner:a.owner,status:a.status,updateFn:`updateActivityStatus('${plan.id}','${d.id}','${a.id}',this.value)`});
+    sortScheduleItems(d.scheduleItems||[]).forEach(item=>{
+      if(item.date)items.push({
+        date:item.date,
+        startTime:item.startTime||'',
+        endTime:item.endTime||'',
+        category:typeBadge(item.type),
+        details:`${item.description||'–'}${d.place?' @ '+d.place:''}`,
+        owner:item.owner,
+        status:item.status,
+        updateFn:`updateScheduleStatus('${plan.id}','${d.id}','${item.id}',this.value)`
+      });
     });
   });
-  // Sort by date then time
-  items.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'99:99').localeCompare(b.time||'99:99'));
-  // Group by date
+  items.sort((a,b)=>{
+    if(a.date!==b.date)return a.date.localeCompare(b.date);
+    if((a.startTime||'99:99')!==(b.startTime||'99:99'))return (a.startTime||'99:99').localeCompare(b.startTime||'99:99');
+    return (a.endTime||'99:99').localeCompare(b.endTime||'99:99');
+  });
   const byDate={};
   items.forEach(item=>{if(!byDate[item.date])byDate[item.date]=[];byDate[item.date].push(item);});
   const dates=Object.keys(byDate).sort();
   if(!dates.length){
-    document.getElementById('detail-cal-view').innerHTML=`<div style="text-align:center;padding:60px;color:var(--muted)">No dated items yet. Add dates to flights, destinations, and activities.</div>`;
+    document.getElementById('detail-cal-view').innerHTML=`<div style="text-align:center;padding:60px;color:var(--muted)">No dated items yet. Add dates to flights, destinations, and schedule items.</div>`;
     return;
   }
   const html=dates.map(date=>{
-    const dayItems=byDate[date];
-    const rows=dayItems.map(item=>`<tr class="${ownerRowClass(item.owner)}">
-      <td style="min-width:60px;font-weight:600">${item.time||'–'}</td>
+    const rows=byDate[date].map(item=>`<tr class="${ownerRowClass(item.owner)}">
+      <td style="min-width:88px;font-weight:700">${fmtTimeRange(item.startTime,item.endTime)}</td>
       <td>${item.details}</td>
-      <td><span class="cat-badge" style="font-size:.75rem">${item.cat}</span></td>
+      <td>${item.category}</td>
       <td>${ownerBadge(item.owner)}</td>
       <td>${inlineStatusSel(item.status,item.updateFn)}</td>
     </tr>`).join('');
@@ -686,30 +807,28 @@ function renderCalView(plan){
   document.getElementById('detail-cal-view').innerHTML=html;
 }
 
-// ── Status Update Functions ───────────────────────────────
 async function updateFlightStatus(planId,fid,val){
   const plans=await loadPlans();const plan=plans.find(p=>p.id===planId);if(!plan)return;
   const f=plan.flights.find(f=>f.id===fid);if(f)f.status=val;
-  await savePlan(plan);
+  await savePlan(plan); openDetail(planId);
 }
 async function updateTransStatus(planId,did,val){
   const plans=await loadPlans();const plan=plans.find(p=>p.id===planId);if(!plan)return;
   const d=plan.destinations.find(d=>d.id===did);if(d&&d.transportation)d.transportation.status=val;
-  await savePlan(plan);
+  await savePlan(plan); openDetail(planId);
 }
 async function updateHotelStatus(planId,did,val){
   const plans=await loadPlans();const plan=plans.find(p=>p.id===planId);if(!plan)return;
   const d=plan.destinations.find(d=>d.id===did);if(d&&d.hotel)d.hotel.status=val;
-  await savePlan(plan);
+  await savePlan(plan); openDetail(planId);
 }
-async function updateActivityStatus(planId,did,aid,val){
+async function updateScheduleStatus(planId,did,sid,val){
   const plans=await loadPlans();const plan=plans.find(p=>p.id===planId);if(!plan)return;
   const d=plan.destinations.find(d=>d.id===did);if(!d)return;
-  const a=(d.activities||[]).find(a=>a.id===aid);if(a)a.status=val;
-  await savePlan(plan);
+  const s=(d.scheduleItems||[]).find(x=>x.id===sid);if(s)s.status=val;
+  await savePlan(plan); openDetail(planId);
 }
 
-// ── Delete Plan ───────────────────────────────────────────
 async function deleteCurrentPlan(){
   if(!confirm('Delete this plan? This cannot be undone.'))return;
   await deletePlan(currentPlanId);
@@ -717,7 +836,6 @@ async function deleteCurrentPlan(){
   showDash();
 }
 
-// ── Init ──────────────────────────────────────────────────
 document.getElementById('login-screen').style.display='flex';
 document.getElementById('app-screen').style.display='none';
 </script>

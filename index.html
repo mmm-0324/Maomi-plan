@@ -285,7 +285,8 @@ function normalizePlan(plan){
     id: f.id || uid(),
     flightNo: f.flightNo || '',
     date: f.date || '',
-    time: f.time || '',
+    departureTime: f.departureTime || f.time || '',
+    arrivalTime: f.arrivalTime || '',
     from: f.from || '',
     to: f.to || '',
     owner: f.owner || 'both',
@@ -310,6 +311,8 @@ function normalizePlan(plan){
         checkIn: d.hotel?.checkIn || '',
         checkOut: d.hotel?.checkOut || '',
         confirmation: d.hotel?.confirmation || '',
+        bookedBy: d.hotel?.bookedBy || 'both',
+        bookingCompleted: !!d.hotel?.bookingCompleted,
         owner: d.hotel?.owner || 'both',
         status: d.hotel?.status || 'pending'
       },
@@ -362,6 +365,7 @@ function ownerBadge(o){
   const[cls,lbl]=m[o]||m.both;
   return `<span class="owner-badge ${cls}">${lbl}</span>`;
 }
+function ownerText(o){return {minami:'Minami',maomao:'Maomao',both:'Both'}[o]||'Both'}
 function ownerRowClass(o){return{minami:'row-minami',maomao:'row-maomao',both:'row-both'}[o]||'row-both'}
 function statusClass(s){return{pending:'st-pending',confirmed:'st-confirmed',completed:'st-completed',cancelled:'st-cancelled'}[s]||'st-pending'}
 function ownerSelect(name,val){
@@ -495,13 +499,15 @@ async function openEditor(planId){
 function editCurrentPlan(){openEditor(currentPlanId)}
 
 function addFlight(f){
-  f=f||{id:uid(),flightNo:'',date:'',from:'',to:'',owner:'both',status:'pending'};
+  f=f||{id:uid(),flightNo:'',date:'',departureTime:'',arrivalTime:'',from:'',to:'',owner:'both',status:'pending'};
   const div=document.createElement('div');
   div.className='item-block';div.dataset.fid=f.id;
   div.innerHTML=`<div class="item-block-header"><span>✈ Flight</span><button class="btn btn-danger btn-sm" onclick="this.closest('.item-block').remove()">Remove</button></div>
   <div class="form-row">
     <div class="form-group"><label>Flight No.</label><input type="text" name="flightNo" value="${f.flightNo||''}" placeholder="CA123"></div>
     <div class="form-group"><label>Date</label><input type="date" name="date" value="${f.date||''}" lang="en"></div>
+    <div class="form-group"><label>Departure Time</label><input type="time" name="departureTime" value="${f.departureTime||''}"></div>
+    <div class="form-group"><label>Arrival Time</label><input type="time" name="arrivalTime" value="${f.arrivalTime||''}"></div>
   </div>
   <div class="form-row">
     <div class="form-group"><label>From</label><input type="text" name="from" value="${f.from||''}" placeholder="PEK"></div>
@@ -547,6 +553,10 @@ function addDestination(d){
     <div class="form-row">
       <div class="form-group"><label>Check-in</label><input type="date" name="hotel-in" value="${d.hotel&&d.hotel.checkIn||''}" lang="en"></div>
       <div class="form-group"><label>Check-out</label><input type="date" name="hotel-out" value="${d.hotel&&d.hotel.checkOut||''}" lang="en"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Booked by</label>${ownerSelect('hotel-booked-by',d.hotel&&d.hotel.bookedBy||'both')}</div>
+      <div class="form-group"><label>Booking completed</label><div style="display:flex;align-items:center;height:42px;padding:0 4px;"><input type="checkbox" name="hotel-booking-completed" ${d.hotel&&d.hotel.bookingCompleted?'checked':''} style="width:auto;margin-right:8px;"><span style="font-size:.9rem;color:var(--text)">Completed</span></div></div>
       <div class="form-group"><label>Owner</label>${ownerSelect('hotel-owner',d.hotel&&d.hotel.owner||'both')}</div>
       <div class="form-group"><label>Status</label>${statusSelect('hotel-status',d.hotel&&d.hotel.status||'pending')}</div>
     </div>
@@ -597,6 +607,8 @@ async function savePlanData(){
       id:el.dataset.fid||uid(),
       flightNo:el.querySelector('[name=flightNo]').value,
       date:el.querySelector('[name=date]').value,
+      departureTime:el.querySelector('[name=departureTime]').value,
+      arrivalTime:el.querySelector('[name=arrivalTime]').value,
       from:el.querySelector('[name=from]').value,
       to:el.querySelector('[name=to]').value,
       owner:el.querySelector('[name=owner]').value,
@@ -634,6 +646,8 @@ async function savePlanData(){
         confirmation:el.querySelector('[name=hotel-conf]').value,
         checkIn:el.querySelector('[name=hotel-in]').value,
         checkOut:el.querySelector('[name=hotel-out]').value,
+        bookedBy:el.querySelector('[name=hotel-booked-by]').value,
+        bookingCompleted:el.querySelector('[name=hotel-booking-completed]').checked,
         owner:el.querySelector('[name=hotel-owner]').value,
         status:el.querySelector('[name=hotel-status]').value
       },
@@ -679,7 +693,7 @@ function renderTableView(plan){
   (plan.flights||[]).forEach(f=>{
     rows.push(`<tr class="${ownerRowClass(f.owner)}">
       <td>${n++}</td><td><span class="cat-badge">✈ Flight</span></td>
-      <td><strong>${f.flightNo||'–'}</strong> · ${fmtDate(f.date)} · ${f.from||'–'} → ${f.to||'–'}</td>
+      <td><strong>${f.flightNo||'–'}</strong> · ${fmtDate(f.date)} · ${fmtTimeRange(f.departureTime,f.arrivalTime)} · ${f.from||'–'} → ${f.to||'–'}</td>
       <td>${ownerBadge(f.owner)}</td>
       <td>${inlineStatusSel(f.status,`updateFlightStatus('${plan.id}','${f.id}',this.value)`)}</td>
     </tr>`);
@@ -698,7 +712,7 @@ function renderTableView(plan){
       const h=d.hotel;
       rows.push(`<tr class="${ownerRowClass(h.owner)}">
         <td>${n++}</td><td><span class="cat-badge">🏨 Hotel</span></td>
-        <td><strong>${h.name}</strong>${h.checkIn?' · '+fmtDate(h.checkIn)+' → '+fmtDate(h.checkOut):''}${h.confirmation?' · #'+h.confirmation:''}</td>
+        <td><strong>${h.name}</strong>${h.checkIn?' · '+fmtDate(h.checkIn)+(h.checkOut?' → '+fmtDate(h.checkOut):''):''}${h.confirmation?' · #'+h.confirmation:''}<div style="margin-top:4px;font-size:.8rem;color:var(--muted)">Booked by: <strong>${ownerText(h.bookedBy)}</strong> · ${h.bookingCompleted ? '✔ Booking completed' : '☐ Booking pending'}</div></td>
         <td>${ownerBadge(h.owner)}</td>
         <td>${inlineStatusSel(h.status,`updateHotelStatus('${plan.id}','${d.id}',this.value)`)}</td>
       </tr>`);
@@ -727,8 +741,8 @@ function renderCalView(plan){
   (plan.flights||[]).forEach(f=>{
     if(f.date)items.push({
       date:f.date,
-      startTime:f.time||'',
-      endTime:'',
+      startTime:f.departureTime||'',
+      endTime:f.arrivalTime||'',
       category:`<span class="cat-badge">✈ Flight</span>`,
       details:`${f.flightNo||'–'} · ${f.from||'–'} → ${f.to||'–'}`,
       owner:f.owner,
@@ -789,20 +803,18 @@ function renderCalView(plan){
     return;
   }
   const html=dates.map(date=>{
-    const rows=byDate[date].map(item=>`<tr class="${ownerRowClass(item.owner)}">
-      <td style="min-width:88px;font-weight:700">${fmtTimeRange(item.startTime,item.endTime)}</td>
-      <td>${item.details}</td>
-      <td>${item.category}</td>
-      <td>${ownerBadge(item.owner)}</td>
-      <td>${inlineStatusSel(item.status,item.updateFn)}</td>
-    </tr>`).join('');
-    return `<div class="cal-day">
-      <div class="cal-day-header">📅 ${fmtDateLong(date)}</div>
-      <div style="overflow-x:auto"><table class="cal-table">
-        <thead><tr><th>Time</th><th>Details</th><th>Category</th><th>Owner</th><th>Status</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table></div>
-    </div>`;
+    const hotelSummaries=(plan.destinations||[])
+      .filter(d=>d.hotel&&d.hotel.name&&d.hotel.checkIn===date)
+      .map(d=>{
+        const h=d.hotel;
+        return `<div style="padding:8px 14px;font-size:.9rem;background:#faf8ff;border-left:4px solid var(--accent);margin-bottom:6px;">🏨 <strong>${h.name}</strong><span style="margin-left:8px;color:var(--muted)">· Booked by ${ownerText(h.bookedBy)}</span><span style="margin-left:8px;color:${h.bookingCompleted ? '#1f7a52' : '#9a6700'}">${h.bookingCompleted ? '✔ Booking completed' : '☐ Booking pending'}</span></div>`;
+      }).join('');
+    const flightSummaries=(plan.flights||[])
+      .filter(f=>f.date===date)
+      .map(f=>`<div style="padding:8px 14px;font-size:.9rem;background:#f8fbff;border-left:4px solid var(--minami-c);margin-bottom:6px;">✈️ <strong>${f.flightNo||'Flight'}</strong> ${f.from||'–'} → ${f.to||'–'}<span style="margin-left:8px;color:var(--muted)">${fmtTimeRange(f.departureTime,f.arrivalTime)}</span></div>`)
+      .join('');
+    const rows=byDate[date].map(item=>`<tr class="${ownerRowClass(item.owner)}"><td style="min-width:88px;font-weight:700">${fmtTimeRange(item.startTime,item.endTime)}</td><td>${item.details}</td><td>${item.category}</td><td>${ownerBadge(item.owner)}</td><td>${inlineStatusSel(item.status,item.updateFn)}</td></tr>`).join('');
+    return `<div class="cal-day"><div class="cal-day-header">📅 ${fmtDateLong(date)}</div>${hotelSummaries}${flightSummaries}<div style="overflow-x:auto"><table class="cal-table"><thead><tr><th>Time</th><th>Details</th><th>Category</th><th>Owner</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }).join('');
   document.getElementById('detail-cal-view').innerHTML=html;
 }
